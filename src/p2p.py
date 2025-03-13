@@ -193,8 +193,8 @@ def receive_data(sock, is_host, state, running):
 
             if not is_host:
                 state['ball_x'], state['ball_y'] = received_data[1:3]
-        except:
-            continue
+        except BlockingIOEror:
+            pass
 
 
 
@@ -273,6 +273,10 @@ def main():
 
     threading.Thread(target=receive_data, args=(sock, is_host, state, running), daemon=True).start()
 
+    sock.setblocking(False)
+
+    frame_counter=0
+
     while running[0]:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -281,16 +285,18 @@ def main():
         handle_input(state)
         if is_host:
             update_ball(state)
-
-        game_state = pickle.dumps((
-        state['paddle_y'], state['ball_x'], state['ball_y'],
-        state['ball_speed_x'], state['ball_speed_y'],
-        state['player_score'], state['opponent_score']
-        ))
-        sock.sendto(game_state, peer_addr)
+        
+        if frame_counter%3==0:
+            game_state = pickle.dumps((
+            state['paddle_y'], state['ball_x'], state['ball_y'],
+            state['ball_speed_x'], state['ball_speed_y'],
+            state['player_score'], state['opponent_score']
+            ))
+            sock.sendto(game_state, peer_addr)
 
 
         draw_game(state, is_host)
+        frame_counter+=1
         clock.tick(GAME_SPEED)
 
     end_game()
